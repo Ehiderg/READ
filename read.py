@@ -18,6 +18,24 @@ def agregar_log(cedula, tipo_documento,operacion, detalles):
     cursor.execute("INSERT INTO Log (CedulaPersona, TipoDocumento, Operacion, FechaOperacion, Detalles) VALUES (?, ?, ?, ?, ?)",
                    cedula, tipo_documento, operacion, datetime.now(), detalles)
     conn.commit()
+@app.route('/log', methods=['GET'])
+def log():
+    cursor.execute("SELECT * FROM Log")
+    row = cursor.fetchone()
+
+    if row:
+        Log = {
+            'Cedula': row.CedulaPersona,
+            'TipoDocumento': row.TipoDocumento,
+            'Accion': row.Operacion,
+            'Fecha': row.FechaOperacion,
+            'Detalles': row.Detalles
+
+        }
+        return jsonify(Log), 200
+    else:
+        return jsonify({"error": "Log sin registros"}), 404
+    
 
 @app.route('/consultar/<numero_documento>', methods=['GET'])
 def consultar(numero_documento):
