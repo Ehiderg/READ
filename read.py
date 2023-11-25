@@ -3,6 +3,8 @@ import pyodbc
 import base64
 import io
 from datetime import datetime
+import os
+from werkzeug.utils import secure_filename
 
 
 app = Flask(__name__)
@@ -18,6 +20,8 @@ def agregar_log(cedula, tipo_documento,operacion, detalles):
     cursor.execute("INSERT INTO Log (CedulaPersona, TipoDocumento, Operacion, FechaOperacion, Detalles) VALUES (?, ?, ?, ?, ?)",
                    cedula, tipo_documento, operacion, datetime.now(), detalles)
     conn.commit()
+
+    
 @app.route('/log', methods=['GET'])
 def log():
     cursor.execute("SELECT * FROM Log")
@@ -44,8 +48,6 @@ def consultar(numero_documento):
     row = cursor.fetchone()
 
     if row:
-        foto_data = base64.b64decode(row.Foto)
-        foto_hex = foto_data.hex()
         # diccionario con los datos de la persona
         persona = {
             'TipoDocumento': row.TipoDocumento,
@@ -56,8 +58,7 @@ def consultar(numero_documento):
             'FechaNacimiento': row.FechaNacimiento,
             'Genero': row.Genero,
             'CorreoElectronico': row.CorreoElectronico,
-            'Celular': row.Celular,
-            'Foto': foto_hex  
+            'Celular': row.Celular
         }
          
         
@@ -67,20 +68,22 @@ def consultar(numero_documento):
     
     else:
         return jsonify({"error": "Persona no encontrada"}), 404
-    
+
+@app.route('/obtener_foto/<numero_documento>', methods=['GET'])
 def obtener_foto(numero_documento):
     # Consultar en la base de datos para obtener la foto
     cursor.execute("SELECT Foto FROM Registro WHERE NumeroDocumento=?", numero_documento)
     row = cursor.fetchone()
 
-    if row and row.Foto:
-        # Decodificar la cadena base64 y devolver la imagen
-        foto_data = base64.b64decode(row.Foto)
-        return send_file(io.BytesIO(foto_data), mimetype='image/jpeg')
+    if row:
+        foto = row.Foto
+        filename, file_extension = os.path.splitext(foto)
 
-    else:
-        return jsonify({"error": "Foto no encontrada"}), 404
-
+        if os.path.exists(foto):
+        # Enviar la imagen
+            return send_file(foto, mimetype=f'image/{file_extension[1:]}')
+        else:
+            return jsonify({"error": "Foto no encontrada"}), 404
+            
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
- 
+    app.run(debug=True, port=4000)
